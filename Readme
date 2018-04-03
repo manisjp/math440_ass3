@@ -1,0 +1,6 @@
+So to run this you could either type out the command, 
+'mpiexec -machinefile lab_ma_file -np 4 ./main_exe 2'
+or you could type './run.sh'. I created the 'run.sh' file simply because I was too lazy to type out
+the above command over and over again. To change the number of cores used and the value of J, either
+edit 'run.sh' or type the correct command. Either way will work though. Otherwise everything else
+you need should be within 'Writeup.pdf'.

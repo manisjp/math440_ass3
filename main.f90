@@ -6,10 +6,10 @@ program main
 	implicit none
 	integer :: ierr, rank, i, k, P, J, L, i_max = 0, i_min = 0, k_max = 0, k_min = 0
 	character(len=32) :: arg
-	real(kind=kind(0.0d0)) :: stime, etime, C_max = -huge(0.0d0), C_min = huge(0.0d0), core_max, core_min, S, rand_num, r_sum
-	real(kind=kind(0.0d0)), dimension(:), allocatable :: rk, w, xi, xi_all
-	real(kind=kind(0.0d0)), dimension(:,:), allocatable :: X, C, X_all, C_all
-	real(kind=kind(0.0d0)), dimension(2) :: maxvals, minvals
+	double precision :: stime, etime, C_max = -huge(0.0d0), C_min = huge(0.0d0), core_max, core_min, S, rand_num, r_sum
+	double precision, dimension(:), allocatable :: rk, w, xi, xi_all
+	double precision, dimension(:,:), allocatable :: X, C, X_all, C_all
+	double precision, dimension(2) :: maxvals, minvals
 	integer, dimension(mpi_status_size) :: mystatus
 
 	! INITIALIZES MPI AND GETS RANK NUMBERS AND NUMBER OF CORES
@@ -29,7 +29,7 @@ program main
 	allocate(rk(1:J))
 	do i = 1, J
 		call random_number(rand_num)
-		rk(i) = (rand_num*(i*(rank+1)+1-(rank+1)/real(i)))+(rank+1)/real(i)
+		rk(i) = real(rand_num*(real(i*(rank+1)+1)-real(rank+1)/real(i)))+real(rank+1)/real(i)
 	enddo
 
 	if (rank == 0) then
@@ -41,7 +41,7 @@ program main
 			w = (/ w, rk /)
 		enddo
 		! CREATES NORMALIZED w
-		w = w/real(sum(w))
+		w = real(w)/real(sum(w))
 	else
 		! SEND rk TO MASTER
 		call mpi_send(rk,J,mpi_double_precision,0,0,mpi_comm_world,ierr)
@@ -61,7 +61,7 @@ program main
 	do i = J*rank+1, J*(rank+1)
 		do k = 1, L
 			call random_number(rand_num)
-			X(i,k) = (rand_num*(real(i)/real(k)+i*k))-i*k
+			X(i,k) = (rand_num*real(real(i)/real(k)+real(i*k)))-real(i*k)
 		enddo
 		xi(i) = sum(X(i,:))/real(L)
 	enddo
@@ -88,7 +88,7 @@ program main
 	! CREATES THE ROWS OF C SEPARATELY
 	do i = J*rank+1, J*(rank+1)
 		do k = 1, L
-			C(i,k) = sum(w*(X_all(i,:)-xi_all(i))*(X_all(k,:)-xi_all(k)))/real(1-sum(w**2.0d0))
+			C(i,k) = sum(w*(X_all(i,:)-xi_all(i))*(X_all(k,:)-xi_all(k)))/(1.0d0-sum(w*w))
 			if (C(i,k) > C_max) then
 				C_max = C(i,k)
 				i_max = i
@@ -100,6 +100,7 @@ program main
 			endif
 		enddo
 	enddo
+	write(*,*) C_max, C_min, sum(X_all(J*rank+1,:))
 	! SEARCHES FOR THE LARGEST C_max AND C_min AND GETS rank OF CORRESPONDING CORES	
 	call mpi_reduce((/ C_max, real(rank,kind=kind(0.0d0)) /),maxvals,2,mpi_2double_precision,mpi_maxloc,0,mpi_comm_world,ierr)
 	call mpi_reduce((/ C_min, real(rank,kind=kind(0.0d0)) /),minvals,2,mpi_2double_precision,mpi_minloc,0,mpi_comm_world,ierr)
